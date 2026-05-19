@@ -113,6 +113,8 @@ if ($step === 'install' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             require_once __DIR__ . '/vendor/autoload.php';
             require_once __DIR__ . '/includes/config.php';
+            // config.php sends Content-Type: application/json — reset for HTML response
+            header('Content-Type: text/html; charset=UTF-8');
             require_once __DIR__ . '/includes/auth.php';
             ob_start();
             require_once __DIR__ . '/includes/seed.php';
@@ -134,25 +136,38 @@ if ($step === 'install' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $info[] = 'Organization created: ' . htmlspecialchars($orgName);
             }
 
-            // Create the super admin account
-            $adminDoc = [
-                '_id'        => new_id(),
-                'name'       => $d['admin_name'],
-                'email'      => $d['admin_email'],
-                'role'       => 'admin',
-                'department' => 'Management',
-                'is_active'  => true,
-                'password'   => $d['admin_hash'],
-                'created_at' => now_iso(),
-            ];
-            db()->users->insertOne($adminDoc);
+            // Create or update the super admin account (safe to re-run)
+            $existingAdmin = db()->users->findOne(['email' => $d['admin_email']]);
+            if ($existingAdmin) {
+                db()->users->updateOne(
+                    ['email' => $d['admin_email']],
+                    ['$set' => [
+                        'name'     => $d['admin_name'],
+                        'role'     => 'admin',
+                        'password' => $d['admin_hash'],
+                        'is_active'=> true,
+                    ]]
+                );
+                $info[] = 'Super admin account updated: ' . htmlspecialchars($d['admin_email']);
+            } else {
+                db()->users->insertOne([
+                    '_id'        => new_id(),
+                    'name'       => $d['admin_name'],
+                    'email'      => $d['admin_email'],
+                    'role'       => 'admin',
+                    'department' => 'Management',
+                    'is_active'  => true,
+                    'password'   => $d['admin_hash'],
+                    'created_at' => now_iso(),
+                ]);
+                $info[] = 'Super admin account created: ' . htmlspecialchars($d['admin_email']);
+            }
             $createdAdminEmail = $d['admin_email'];
-            $info[] = 'Super admin account created: ' . htmlspecialchars($createdAdminEmail);
             $step = 'done';
             session_destroy();
         } catch (Throwable $e) {
             $errors[] = 'Installation error: ' . htmlspecialchars($e->getMessage());
-            $step = 'step5';
+            $step = 'install';
         }
     }
 }
