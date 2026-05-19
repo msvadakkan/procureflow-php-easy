@@ -43,9 +43,16 @@ if ($method === 'POST' && !$id) {
 
     // Logo upload
     if (!empty($_FILES['logo']['name'])) {
+        $allowed_ext  = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+        $allowed_mime = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+        $ext  = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
+        $mime = mime_content_type($_FILES['logo']['tmp_name']);
+        if (!in_array($ext, $allowed_ext, true) || !in_array($mime, $allowed_mime, true)) {
+            json_err('Invalid file type. Only image files are allowed.');
+        }
+        if ($_FILES['logo']['size'] > 2 * 1024 * 1024) json_err('Logo file must be under 2 MB.');
         $upload_dir = UPLOAD_DIR . 'logos/';
         if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
-        $ext  = pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION);
         $name = $doc['_id'] . '_logo.' . $ext;
         move_uploaded_file($_FILES['logo']['tmp_name'], $upload_dir . $name);
         $doc['logo'] = 'logos/' . $name;

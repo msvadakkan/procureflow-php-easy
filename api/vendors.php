@@ -50,11 +50,18 @@ if ($method === 'POST' && !$id) {
     ];
 
     // Handle file uploads
-    $upload_dir = UPLOAD_DIR . 'vendors/';
+    $upload_dir       = UPLOAD_DIR . 'vendors/';
+    $allowed_doc_ext  = ['pdf', 'jpg', 'jpeg', 'png'];
+    $allowed_doc_mime = ['application/pdf', 'image/jpeg', 'image/png'];
     if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
     foreach (['trade_license', 'vat_certificate', 'bank_document'] as $field) {
         if (!empty($_FILES[$field]['name'])) {
-            $ext  = pathinfo($_FILES[$field]['name'], PATHINFO_EXTENSION);
+            $ext  = strtolower(pathinfo($_FILES[$field]['name'], PATHINFO_EXTENSION));
+            $mime = mime_content_type($_FILES[$field]['tmp_name']);
+            if (!in_array($ext, $allowed_doc_ext, true) || !in_array($mime, $allowed_doc_mime, true)) {
+                json_err("Invalid file type for $field. Only PDF and image files are allowed.");
+            }
+            if ($_FILES[$field]['size'] > 5 * 1024 * 1024) json_err("$field must be under 5 MB.");
             $name = $doc['_id'] . '_' . $field . '.' . $ext;
             move_uploaded_file($_FILES[$field]['tmp_name'], $upload_dir . $name);
             $doc[$field] = $name;

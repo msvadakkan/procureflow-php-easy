@@ -5,8 +5,12 @@ define('MONGO_DB',   getenv('MONGO_DB')   ?: 'purchase_approval');
 define('JWT_SECRET', getenv('JWT_SECRET') ?: 'change-this-secret-in-production');
 define('UPLOAD_DIR', __DIR__ . '/../uploads/');
 
-// Allow CORS for local dev
-header('Access-Control-Allow-Origin: *');
+// Restrict CORS to configured app origin
+$allowed_origin = rtrim(getenv('APP_URL') ?: 'http://localhost', '/');
+$request_origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($request_origin === $allowed_origin) {
+    header('Access-Control-Allow-Origin: ' . $allowed_origin);
+}
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }

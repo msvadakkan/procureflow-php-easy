@@ -1,0 +1,37 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: ${MONGO_DB:-purchase_approval}
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production}
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+    volumes:
+      - uploads:/var/www/html/uploads
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  uploads:

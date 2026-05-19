@@ -16,7 +16,7 @@ if ($method === 'GET' && $path === 'app-info') {
     $company = db()->companies->findOne(['is_active' => true], ['sort' => ['created_at' => 1]]);
     json_ok([
         'name' => $company ? (string)($company['name'] ?? 'ProcureFlow') : 'ProcureFlow',
-        'logo' => ($company && !empty($company['logo_filename'])) ? '/uploads/' . $company['logo_filename'] : null,
+        'logo' => ($company && !empty($company['logo'])) ? '/uploads/' . $company['logo'] : null,
     ]);
 }
 

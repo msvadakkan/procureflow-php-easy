@@ -14,6 +14,7 @@ function mongo_doc($doc): array {
 
 // GET /api/tenders
 if ($method === 'GET' && !$id) {
+    require_auth();
     $rows = iterator_to_array(db()->tenders->find([], ['sort' => ['created_at' => -1]]));
     json_ok(array_map('mongo_doc', $rows));
 }
@@ -53,7 +54,12 @@ if ($method === 'GET' && $id && !$action) {
 
 // PUT /api/tenders/:id (close/reopen)
 if ($method === 'PUT' && $id && !$action) {
-    require_auth();
+    $claims = require_auth();
+    $tender = db()->tenders->findOne(['_id' => $id]);
+    if (!$tender) json_err('Not found', 404);
+    if ($claims['role'] !== 'admin' && $tender['created_by'] !== $claims['sub']) {
+        json_err('Forbidden', 403);
+    }
     $b = body();
     $update = [];
     if (isset($b['status']))  $update['status']  = $b['status'];
