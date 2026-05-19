@@ -570,9 +570,17 @@ $currentNum = $STEPS[$step]['num'] ?? 1;
             Delete <code>install.php</code> from your server immediately after setup. Leaving it accessible allows anyone to overwrite your configuration.
           </div>
 
-          <a href="portal.html" style="display:inline-flex;align-items:center;gap:.5rem;margin-top:1.5rem;padding:.875rem 2rem;background:#ec4899;color:#fefce8;border-radius:10px;font-weight:700;text-decoration:none;font-size:.95rem">
-            🔐 Go to Staff Login →
+          <p style="margin-top:1.25rem;font-size:.85rem;color:#6b7280">
+            Redirecting to home page in <span id="countdown">4</span> seconds…
+          </p>
+          <a href="index.html" style="display:inline-flex;align-items:center;gap:.5rem;margin-top:.75rem;padding:.875rem 2rem;background:#ec4899;color:#fefce8;border-radius:10px;font-weight:700;text-decoration:none;font-size:.95rem">
+            🏠 Go to Home Page →
           </a>
+          <script>
+            let t = 4;
+            const el = document.getElementById('countdown');
+            const iv = setInterval(() => { el.textContent = --t; if (t <= 0) { clearInterval(iv); location.href = 'index.html'; } }, 1000);
+          </script>
         </div>
       </div>
     </div>

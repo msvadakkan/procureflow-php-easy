@@ -1,6 +1,15 @@
 Options -Indexes
 RewriteEngine On
 
+# ─── Setup guard ─────────────────────────────────────────────────────────────
+# If .env doesn't exist the app is not yet configured — redirect everything
+# (except the installer itself and static assets) to install.php.
+RewriteCond %{DOCUMENT_ROOT}/.env !-f
+RewriteCond %{REQUEST_URI} !^/install\.php
+RewriteCond %{REQUEST_URI} !^/assets/
+RewriteCond %{REQUEST_URI} !^/uploads/
+RewriteRule ^ /install.php [R=302,L]
+
 # API routing: /api/<resource>[/<id>][/<action>]
 RewriteRule ^api/auth/(.*)$           api/index.php?resource=auth&path=$1   [QSA,L]
 RewriteRule ^api/admin/(.*)$          api/index.php?resource=admin&path=$1  [QSA,L]
