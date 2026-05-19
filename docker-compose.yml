@@ -8,11 +8,6 @@ services:
       MONGO_DB: ${MONGO_DB:-purchase_approval}
       JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production}
       APP_URL: ${APP_URL:-http://localhost:8080}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_FROM: ${SMTP_FROM:-}
     volumes:
       - uploads:/var/www/html/uploads
     depends_on:

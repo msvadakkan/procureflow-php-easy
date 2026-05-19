@@ -35,34 +35,6 @@ function test_mongo(string $uri, string $db): array {
     }
 }
 
-function test_smtp(string $host, int $port, string $user, string $pass): array {
-    try {
-        $ctx = stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
-        $fp  = @stream_socket_client("tcp://$host:$port", $errno, $errstr, 5, STREAM_CLIENT_CONNECT, $ctx);
-        if (!$fp) return ['ok' => false, 'msg' => "Cannot reach $host:$port — $errstr"];
-        $banner = fgets($fp, 512);
-        if (!str_starts_with($banner, '220')) { fclose($fp); return ['ok' => false, 'msg' => "Unexpected banner: $banner"]; }
-        fwrite($fp, "EHLO localhost\r\n"); fgets($fp, 512);
-        fwrite($fp, "STARTTLS\r\n");
-        $tls = fgets($fp, 512);
-        if (!str_starts_with($tls, '220')) { fclose($fp); return ['ok' => false, 'msg' => "STARTTLS not supported: $tls"]; }
-        // Upgrade to TLS
-        stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
-        fwrite($fp, "EHLO localhost\r\n"); fgets($fp, 512);
-        fwrite($fp, "AUTH LOGIN\r\n"); fgets($fp, 512);
-        fwrite($fp, base64_encode($user) . "\r\n"); fgets($fp, 512);
-        fwrite($fp, base64_encode($pass) . "\r\n");
-        $authResp = fgets($fp, 512);
-        fwrite($fp, "QUIT\r\n");
-        fclose($fp);
-        if (str_starts_with($authResp, '235')) return ['ok' => true, 'msg' => 'Authentication successful'];
-        if (str_starts_with($authResp, '534') || str_starts_with($authResp, '535'))
-            return ['ok' => false, 'msg' => 'Authentication failed — check username/password or enable App Password'];
-        return ['ok' => true, 'msg' => 'SMTP server reachable (auth response: ' . trim($authResp) . ')'];
-    } catch (Throwable $e) {
-        return ['ok' => false, 'msg' => $e->getMessage()];
-    }
-}
 
 // ── Step routing ─────────────────────────────────────────────────────────────
 $step              = $_POST['step'] ?? ($_GET['step'] ?? 'requirements');
@@ -86,17 +58,6 @@ if ($step === 'test_mongo') {
     exit;
 }
 
-// ── Action: Test SMTP ─────────────────────────────────────────────────────────
-if ($step === 'test_smtp') {
-    header('Content-Type: application/json');
-    echo json_encode(test_smtp(
-        $d['smtp_host'] ?? 'smtp.office365.com',
-        (int)($d['smtp_port'] ?? 587),
-        $d['smtp_user'] ?? '',
-        $d['smtp_pass'] ?? ''
-    ));
-    exit;
-}
 
 // ── Step: Advance requirements check ─────────────────────────────────────────
 if ($step === 'step2' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -135,15 +96,10 @@ if ($step === 'step4' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 // ── Step: Install & Write .env ────────────────────────────────────────────────
 if ($step === 'install' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $envData = [
-        'MONGO_URI'             => $d['mongo_uri']       ?? 'mongodb://localhost:27017',
-        'MONGO_DB'              => $d['mongo_db']        ?? 'purchase_approval',
-        'JWT_SECRET'            => $d['jwt_secret']      ?? bin2hex(random_bytes(32)),
-        'APP_URL'               => rtrim($d['app_url'] ?? '', '/'),
-        'SMTP_HOST'             => $d['smtp_host']        ?? 'smtp.office365.com',
-        'SMTP_PORT'             => $d['smtp_port']        ?? '587',
-        'SMTP_USER'             => $d['smtp_user']        ?? '',
-        'SMTP_PASS'             => $d['smtp_pass']        ?? '',
-        'SMTP_FROM'             => $d['smtp_from']        ?? $d['smtp_user'] ?? '',
+        'MONGO_URI'  => $d['mongo_uri']  ?? 'mongodb://localhost:27017',
+        'MONGO_DB'   => $d['mongo_db']   ?? 'purchase_approval',
+        'JWT_SECRET' => $d['jwt_secret'] ?? bin2hex(random_bytes(32)),
+        'APP_URL'    => rtrim($d['app_url'] ?? '', '/'),
     ];
     if (!isset($d['admin_hash']) || !$d['admin_hash']) {
         $errors[] = 'Admin account was not configured. Go back to Step 3.';
@@ -167,14 +123,13 @@ if ($step === 'install' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $orgName = trim($d['org_name'] ?? '');
             if ($orgName) {
                 db()->companies->insertOne([
-                    '_id'           => new_id(),
-                    'name'          => $orgName,
-                    'email'         => $d['org_email']    ?? '',
-                    'phone'         => $d['org_phone']    ?? '',
-                    'logo_url'      => $d['org_logo_url'] ?? '',
-                    'logo_filename' => null,
-                    'is_active'     => true,
-                    'created_at'    => now_iso(),
+                    '_id'        => new_id(),
+                    'name'       => $orgName,
+                    'email'      => $d['org_email'] ?? '',
+                    'phone'      => $d['org_phone'] ?? '',
+                    'logo'       => null,
+                    'is_active'  => true,
+                    'created_at' => now_iso(),
                 ]);
                 $info[] = 'Organization created: ' . htmlspecialchars($orgName);
             }
@@ -203,12 +158,10 @@ if ($step === 'install' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ── Populate defaults ─────────────────────────────────────────────────────────
-$d['mongo_uri']    = $d['mongo_uri']    ?? 'mongodb://localhost:27017';
-$d['mongo_db']     = $d['mongo_db']     ?? 'purchase_approval';
-$d['jwt_secret']   = $d['jwt_secret']   ?? bin2hex(random_bytes(32));
-$d['app_url']      = $d['app_url']      ?? 'https://' . ($_SERVER['HTTP_HOST'] ?? 'yourdomain.com');
-$d['smtp_host']    = $d['smtp_host']    ?? 'smtp.office365.com';
-$d['smtp_port']    = $d['smtp_port']    ?? '587';
+$d['mongo_uri']  = $d['mongo_uri']  ?? (getenv('MONGO_URI') ?: 'mongodb://localhost:27017');
+$d['mongo_db']   = $d['mongo_db']   ?? 'purchase_approval';
+$d['jwt_secret'] = $d['jwt_secret'] ?? bin2hex(random_bytes(32));
+$d['app_url']    = $d['app_url']    ?? 'https://' . ($_SERVER['HTTP_HOST'] ?? 'yourdomain.com');
 
 $checks  = req_checks();
 $allPass = array_reduce($checks, fn($c, $i) => $c && $i[1], true);
@@ -219,9 +172,8 @@ $STEPS = [
     'step3b'       => ['num' => 3, 'label' => 'Admin Account'],
     'step4'        => ['num' => 3, 'label' => 'Admin Account'],
     'step4b'       => ['num' => 4, 'label' => 'Organization'],
-    'step5'        => ['num' => 5, 'label' => 'Mail Server'],
-    'install'      => ['num' => 6, 'label' => 'Install'],
-    'done'         => ['num' => 6, 'label' => 'Install'],
+    'install'      => ['num' => 5, 'label' => 'Install'],
+    'done'         => ['num' => 5, 'label' => 'Install'],
 ];
 $currentNum = $STEPS[$step]['num'] ?? 1;
 ?>
@@ -349,8 +301,7 @@ $currentNum = $STEPS[$step]['num'] ?? 1;
         ['key' => 'step2',        'num' => 2, 'icon' => '🗄️', 'label' => 'Database & App'],
         ['key' => 'step3b',       'num' => 3, 'icon' => '👤', 'label' => 'Admin Account'],
         ['key' => 'step4b',       'num' => 4, 'icon' => '🏢', 'label' => 'Organization'],
-        ['key' => 'step5',        'num' => 5, 'icon' => '📧', 'label' => 'Mail Server'],
-        ['key' => 'install',      'num' => 6, 'icon' => '🚀', 'label' => 'Install'],
+        ['key' => 'install',      'num' => 5, 'icon' => '🚀', 'label' => 'Install'],
       ];
       foreach ($stepDefs as $s):
         $cls = 'step-item';
@@ -525,7 +476,7 @@ $currentNum = $STEPS[$step]['num'] ?? 1;
         </div>
 
         <form method="POST">
-          <input type="hidden" name="step" value="step5" />
+          <input type="hidden" name="step" value="install" />
 
           <div class="field">
             <label>Organization / Company Name</label>
@@ -550,73 +501,14 @@ $currentNum = $STEPS[$step]['num'] ?? 1;
 
           <div class="btn-row">
             <a href="install.php?step=step3b" class="btn btn-outline">← Back</a>
-            <button type="submit" name="step" value="step5" class="btn btn-skip">Skip</button>
-            <button type="submit" name="step" value="step5" class="btn btn-primary">Continue → Mail Server →</button>
+            <button type="submit" name="step" value="install" class="btn btn-skip">Skip</button>
+            <button type="submit" name="step" value="install" class="btn btn-primary">Continue → Install →</button>
           </div>
         </form>
       </div>
     </div>
 
-    <!-- ── STEP 5: SMTP / Mail Server ──────────────────────────────────── -->
-    <?php elseif ($step === 'step5'): ?>
-    <div class="card">
-      <div class="card-header">
-        <div class="icon">📧</div>
-        <div>
-          <h2>Mail Server (Optional)</h2>
-          <p>Configure SMTP to send approval notifications by email</p>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="info-box">
-          📋 <strong>Leave blank to skip — email notifications are optional.</strong><br />
-          Works with any SMTP provider (Gmail, Outlook, Office 365, custom). For Office 365:<br />
-          1. Enable <strong>Authenticated SMTP</strong> on the mailbox in the Microsoft 365 Admin Center<br />
-          2. If MFA is enabled, create an <strong>App Password</strong> and use it as the password here
-        </div>
-
-        <form method="POST">
-          <input type="hidden" name="step" value="install" />
-          <!-- back: step3 (Azure AD) -->
-
-          <div class="grid-2">
-            <div class="field">
-              <label>SMTP Host</label>
-              <input name="smtp_host" value="<?= htmlspecialchars($d['smtp_host']) ?>" placeholder="smtp.office365.com" />
-            </div>
-            <div class="field">
-              <label>SMTP Port</label>
-              <input name="smtp_port" type="number" value="<?= htmlspecialchars($d['smtp_port']) ?>" placeholder="587" />
-              <div class="desc">587 with STARTTLS (recommended for Office 365)</div>
-            </div>
-          </div>
-          <div class="field">
-            <label>SMTP Username <span class="hint">(usually the sender email)</span></label>
-            <input type="email" name="smtp_user" value="<?= htmlspecialchars($d['smtp_user'] ?? '') ?>" placeholder="notifications@yourcompany.com" />
-          </div>
-          <div class="field">
-            <label>SMTP Password <span class="hint">or App Password if MFA enabled</span></label>
-            <input type="password" name="smtp_pass" value="<?= htmlspecialchars($d['smtp_pass'] ?? '') ?>" placeholder="••••••••" />
-          </div>
-          <div class="field">
-            <label>From Email Address</label>
-            <input type="email" name="smtp_from" value="<?= htmlspecialchars($d['smtp_from'] ?? $d['smtp_user'] ?? '') ?>" placeholder="notifications@yourcompany.com" />
-            <div class="desc">The "From" address shown on notification emails. Must match or be an alias of the SMTP username.</div>
-          </div>
-
-          <button type="button" class="btn btn-test" onclick="testSmtp(this)">📡 Test SMTP Connection</button>
-          <div id="smtp-result" class="test-result"></div>
-
-          <div class="btn-row">
-            <a href="install.php?step=step4b" class="btn btn-outline">← Back</a>
-            <button type="submit" name="step" value="install" class="btn btn-skip">Skip (no email notifications)</button>
-            <button type="submit" name="step" value="install" class="btn btn-primary">💾 Save &amp; Continue →</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- ── STEP 6: Install ───────────────────────────────────────────────── -->
+    <!-- ── STEP 5: Install ───────────────────────────────────────────────── -->
     <?php elseif ($step === 'install'): ?>
     <div class="card">
       <div class="card-header">
@@ -633,7 +525,6 @@ $currentNum = $STEPS[$step]['num'] ?? 1;
           <tr><td>Database</td><td><?= htmlspecialchars($d['mongo_db'] ?? '') ?></td></tr>
           <tr><td>App URL</td><td><?= htmlspecialchars($d['app_url'] ?? '') ?></td></tr>
           <tr><td>Admin Account</td><td><?= !empty($d['admin_email']) ? '✅ ' . htmlspecialchars($d['admin_email']) : '❌ Not configured' ?></td></tr>
-          <tr><td>SMTP Mail</td><td><?= !empty($d['smtp_user']) ? '✅ ' . htmlspecialchars($d['smtp_user']) : '⏭️ Skipped' ?></td></tr>
         </table>
 
         <?php if (empty($d['admin_email'])): ?>
@@ -645,7 +536,7 @@ $currentNum = $STEPS[$step]['num'] ?? 1;
             <div class="alert alert-err"><?= $e ?></div>
           <?php endforeach; ?>
           <div class="btn-row" style="border:none;padding:0;margin:0">
-            <a href="install.php?step=step5" class="btn btn-outline">← Back</a>
+            <a href="install.php?step=step4b" class="btn btn-outline">← Back</a>
             <button type="submit" class="btn btn-primary" style="font-size:1rem;padding:.875rem 2rem">🚀 Install Now</button>
           </div>
         </form>
@@ -708,21 +599,6 @@ async function testMongo(btn) {
   btn.disabled = false; btn.textContent = '🔌 Test MongoDB Connection';
 }
 
-async function testSmtp(btn) {
-  const form = btn.closest('form');
-  const fd = new FormData(form);
-  fd.delete('step');
-  await fetch('install.php', { method:'POST', body: new URLSearchParams({ step:'step5', ...Object.fromEntries(fd) }) });
-
-  btn.disabled = true; btn.textContent = 'Connecting…';
-  const res = await fetch('install.php?step=test_smtp');
-  const data = await res.json();
-  const el = document.getElementById('smtp-result');
-  el.className = 'test-result ' + (data.ok ? 'ok' : 'fail');
-  el.textContent = (data.ok ? '✅ ' : '❌ ') + data.msg;
-  el.style.display = 'block';
-  btn.disabled = false; btn.textContent = '📡 Test SMTP Connection';
-}
 </script>
 </body>
 </html>
