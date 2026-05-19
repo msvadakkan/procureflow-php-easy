@@ -15,8 +15,17 @@ function mongo_doc($doc): array {
 
 // GET /api/vendors
 if ($method === 'GET' && !$id) {
-    require_admin();
-    $rows = iterator_to_array(db()->vendors->find([], ['projection' => ['password' => 0], 'sort' => ['created_at' => -1]]));
+    $user = require_auth();
+    if ($user['role'] === 'admin') {
+        $rows = iterator_to_array(db()->vendors->find([], ['projection' => ['password' => 0], 'sort' => ['created_at' => -1]]));
+    } else {
+        // Authenticated approvers can see approved vendors (for comparison sheet)
+        $rows = iterator_to_array(db()->vendors->find(
+            ['status' => 'approved'],
+            ['projection' => ['password' => 0, 'bank_name' => 0, 'account_name' => 0, 'account_number' => 0, 'iban' => 0, 'swift_code' => 0, 'branch' => 0],
+             'sort' => ['company_name' => 1]]
+        ));
+    }
     json_ok(array_map('mongo_doc', $rows));
 }
 

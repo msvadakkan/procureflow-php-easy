@@ -245,11 +245,11 @@ async function renderDashboard(el) {
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Title</th><th>Amount (AED)</th><th>Status</th><th>Date</th></tr></thead>
+          <thead><tr><th>Title</th><th>Items</th><th>Status</th><th>Date</th></tr></thead>
           <tbody>
             ${requests.slice(0,8).map(r => `<tr>
               <td><a href="#requests/${r.id}" style="color:var(--primary);font-weight:600">${esc(r.title)}</a></td>
-              <td>${fmt(r.amount)}</td>
+              <td>${(r.items||[]).length} item${(r.items||[]).length !== 1 ? 's' : ''}</td>
               <td>${badge(r.status)}</td>
               <td>${fmtDate(r.created_at)}</td>
             </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--gray-400);padding:2rem">No requests yet</td></tr>'}
@@ -277,11 +277,11 @@ async function renderRequests(el) {
     <div class="card">
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Title</th><th>Amount (AED)</th><th>Category</th><th>Status</th><th>Date</th><th></th></tr></thead>
+          <thead><tr><th>Title</th><th>Items</th><th>Category</th><th>Status</th><th>Date</th><th></th></tr></thead>
           <tbody>
             ${rows.map(r => `<tr>
               <td style="font-weight:600">${esc(r.title)}</td>
-              <td>${fmt(r.amount)}</td>
+              <td>${(r.items||[]).length} item${(r.items||[]).length !== 1 ? 's' : ''}</td>
               <td>${esc(r.category || '—')}</td>
               <td>${badge(r.status)}</td>
               <td>${fmtDate(r.created_at)}</td>
@@ -297,16 +297,12 @@ async function renderRequestForm(el) {
   const companies = await api.get('/companies').catch(() => []);
   el.innerHTML = `
     <div class="page-header"><h2>New Purchase Request</h2></div>
-    <div class="card" style="max-width:600px">
+    <div class="card" style="max-width:760px">
       <div class="card-body">
         <div id="req-error"></div>
         <div class="form-group">
-          <label class="form-label">Title *</label>
+          <label class="form-label">Request Title *</label>
           <input id="req-title" class="form-control" placeholder="Brief description of what you need">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Amount (AED) *</label>
-          <div class="input-prefix"><span class="prefix">AED</span><input id="req-amount" type="number" step="0.01" class="form-control" placeholder="0.00"></div>
         </div>
         <div class="form-group">
           <label class="form-label">Category</label>
@@ -320,7 +316,23 @@ async function renderRequestForm(el) {
           </select>
         </div>` : ''}
         <div class="form-group">
-          <label class="form-label">Description</label>
+          <label class="form-label">Items *</label>
+          <div class="table-wrap" style="margin-bottom:.625rem">
+            <table id="items-table" style="min-width:100%">
+              <thead><tr>
+                <th>Item Name *</th>
+                <th style="width:90px">Qty *</th>
+                <th>Brand</th>
+                <th>Model</th>
+                <th style="width:44px"></th>
+              </tr></thead>
+              <tbody id="items-body"></tbody>
+            </table>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" onclick="addItemRow()">+ Add Item</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
           <textarea id="req-desc" class="form-control" rows="3" placeholder="Additional details…"></textarea>
         </div>
         <div class="btn-group">
@@ -329,19 +341,51 @@ async function renderRequestForm(el) {
         </div>
       </div>
     </div>`;
+  addItemRow();
+}
+
+function addItemRow() {
+  const tbody = document.getElementById('items-body');
+  if (!tbody) return;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input class="form-control form-control-sm item-name" placeholder="Item name" required></td>
+    <td><input class="form-control form-control-sm item-qty" type="number" min="1" value="1" required></td>
+    <td><input class="form-control form-control-sm item-brand" placeholder="Optional"></td>
+    <td><input class="form-control form-control-sm item-model" placeholder="Optional"></td>
+    <td><button type="button" onclick="removeItemRow(this)" class="btn btn-danger btn-sm" style="padding:.25rem .5rem">×</button></td>`;
+  tbody.appendChild(tr);
+  tr.querySelector('.item-name').focus();
+}
+
+function removeItemRow(btn) {
+  const tbody = document.getElementById('items-body');
+  if (tbody && tbody.children.length > 1) btn.closest('tr').remove();
 }
 
 async function submitRequest() {
-  const title  = document.getElementById('req-title')?.value?.trim();
-  const amount = document.getElementById('req-amount')?.value;
-  if (!title || !amount) { showFormError('req-error', 'Title and amount are required'); return; }
+  const title = document.getElementById('req-title')?.value?.trim();
+  if (!title) { showFormError('req-error', 'Request title is required'); return; }
+  const itemRows = document.querySelectorAll('#items-body tr');
+  const items = [];
+  for (const row of itemRows) {
+    const name = row.querySelector('.item-name')?.value?.trim();
+    const qty  = parseInt(row.querySelector('.item-qty')?.value || '1', 10);
+    if (!name) { showFormError('req-error', 'Item name is required for every row'); return; }
+    items.push({
+      name, quantity: qty,
+      brand: row.querySelector('.item-brand')?.value?.trim() || '',
+      model: row.querySelector('.item-model')?.value?.trim() || '',
+    });
+  }
+  if (!items.length) { showFormError('req-error', 'Add at least one item'); return; }
   const compSel = document.getElementById('req-company');
   const body = {
-    title, amount: parseFloat(amount),
+    title, items,
     category:     document.getElementById('req-category')?.value || '',
     description:  document.getElementById('req-desc')?.value     || '',
     company_id:   compSel?.value   || null,
-    company_name: compSel?.options[compSel.selectedIndex]?.dataset.name || null,
+    company_name: compSel?.options[compSel?.selectedIndex]?.dataset?.name || null,
   };
   try {
     await api.post('/requests', body);
@@ -350,37 +394,315 @@ async function submitRequest() {
 }
 
 async function renderRequestDetail(el, id) {
-  const r = await api.get('/requests/' + id);
+  const [r, vendors] = await Promise.all([
+    api.get('/requests/' + id),
+    api.get('/vendors').catch(() => []),
+  ]);
+  const approvedVendors = vendors.filter(v => v.status === 'approved');
+  const items = r.items || [];
+  const canAct = r.status === 'pending' && canApprove();
+  const comp = r.comparison || null;
+
   el.innerHTML = `
     <a href="#requests" class="btn btn-outline btn-sm mb-4">← Back</a>
-    <div class="card" style="max-width:700px">
-      <div class="card-header">
-        <h3>${esc(r.title)}</h3>
-        ${badge(r.status)}
+    <div style="max-width:900px">
+
+      <!-- Request Info -->
+      <div class="card mb-4">
+        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+          <h3 style="margin:0">${esc(r.title)}</h3>
+          ${badge(r.status)}
+        </div>
+        <div class="card-body">
+          <div class="grid grid-2 gap-4 mb-4">
+            <div><div class="text-xs text-gray">Requester</div><div class="font-bold">${esc(r.requester_name || '—')}</div></div>
+            <div><div class="text-xs text-gray">Category</div><div>${esc(r.category || '—')}</div></div>
+            <div><div class="text-xs text-gray">Department</div><div>${esc(r.department || '—')}</div></div>
+            <div><div class="text-xs text-gray">Date</div><div>${fmtDate(r.created_at)}</div></div>
+          </div>
+          ${items.length ? `
+          <div class="mb-4">
+            <div class="text-xs text-gray mb-2" style="font-weight:700;text-transform:uppercase;letter-spacing:.05em">Requested Items</div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Item Name</th><th>Qty</th><th>Brand</th><th>Model</th></tr></thead>
+                <tbody>
+                  ${items.map(i => `<tr>
+                    <td style="font-weight:600">${esc(i.name)}</td>
+                    <td>${i.quantity}</td>
+                    <td>${esc(i.brand || '—')}</td>
+                    <td>${esc(i.model || '—')}</td>
+                  </tr>`).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>` : ''}
+          ${r.description ? `<p class="text-sm text-gray mb-4">${esc(r.description)}</p>` : ''}
+          ${r.status === 'pending' && r.requester_id === currentUser?.id ? `
+            <button class="btn btn-outline btn-sm" onclick="doCancel('${r.id}')">Cancel Request</button>` : ''}
+          ${(r.history || []).length ? `
+            <h4 style="font-size:.9rem;font-weight:700;margin:1.25rem 0 .5rem">Approval History</h4>
+            ${r.history.map(h => `<div style="padding:.625rem;background:var(--gray-50);border-radius:.5rem;margin-bottom:.5rem;font-size:.8rem">
+              <strong>${esc(h.approver_name)}</strong> (${esc(h.approver_role)}) — <em>${h.action}</em> — ${fmtDate(h.created_at)}
+              ${h.comments ? `<div style="color:var(--gray-500);margin-top:.25rem">${esc(h.comments)}</div>` : ''}
+            </div>`).join('')}` : ''}
+        </div>
+      </div>
+
+      <!-- Vendor Comparison Sheet -->
+      ${(canAct || comp) ? comparisonCard(r, items, approvedVendors, comp, canAct) : ''}
+
+    </div>`;
+
+  // Init live totals if editable form is present
+  if (document.getElementById('comp-sheet-form')) updateCompTotals();
+}
+
+function comparisonCard(r, items, vendors, comp, canAct) {
+  const showForm = canAct;
+  const vendorOpts = vendors.map(v =>
+    `<option value="${esc(v.id)}" data-name="${esc(v.company_name)}">${esc(v.company_name)}</option>`
+  ).join('');
+
+  // Pre-fill from saved comparison if exists
+  const sv = comp ? comp.vendors : [];
+  const sp = comp ? comp.line_items : [];
+
+  const vendorSelects = [0,1,2].map(vi => `
+    <div>
+      <label class="form-label" style="font-size:.8rem;font-weight:700">Vendor ${vi+1}</label>
+      <select id="comp-v${vi}-sel" class="form-control form-control-sm" onchange="updateCompTotals()">
+        <option value="">— Select Vendor —</option>
+        ${vendors.map(v => `<option value="${v.id}" data-name="${esc(v.company_name)}"${sv[vi] && sv[vi].id === v.id ? ' selected' : ''}>${esc(v.company_name)}</option>`).join('')}
+      </select>
+    </div>`).join('');
+
+  const itemRows = items.map((item, ii) => {
+    const savedPrices = sp[ii] ? sp[ii].vendor_prices : [0,0,0];
+    return `<tr>
+      <td style="font-weight:600">${esc(item.name)}</td>
+      <td style="text-align:center">${item.quantity}</td>
+      ${[0,1,2].map(vi => `
+        <td style="min-width:110px"><input id="comp-p-${ii}-${vi}" class="form-control form-control-sm" type="number" min="0" step="0.01" placeholder="0.00" value="${savedPrices[vi] > 0 ? savedPrices[vi] : ''}" oninput="updateCompTotals()" style="max-width:100px"></td>
+        <td id="comp-lt-${ii}-${vi}" style="text-align:right;font-size:.85rem;color:var(--gray-500)">—</td>
+      `).join('')}
+    </tr>`;
+  }).join('');
+
+  const roView = comp ? compReadOnly(comp) : '';
+
+  return `
+    <div class="card mb-4">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+        <div>
+          <h4 style="margin:0;font-size:1rem;font-weight:800">Vendor Comparison Sheet</h4>
+          <div class="text-xs text-gray" style="margin-top:.2rem">Compare up to 3 vendor quotes — cheapest is auto-highlighted</div>
+        </div>
+        ${comp && canAct ? `<button class="btn btn-outline btn-sm" onclick="toggleCompEdit()">Re-enter Prices</button>` : ''}
       </div>
       <div class="card-body">
-        <div class="grid grid-2 gap-4 mb-4">
-          <div><div class="text-xs text-gray">Amount</div><div class="font-bold">AED ${fmt(r.amount)}</div></div>
-          <div><div class="text-xs text-gray">Requester</div><div class="font-bold">${esc(r.requester_name || '—')}</div></div>
-          <div><div class="text-xs text-gray">Category</div><div>${esc(r.category || '—')}</div></div>
-          <div><div class="text-xs text-gray">Date</div><div>${fmtDate(r.created_at)}</div></div>
-        </div>
-        ${r.description ? `<p class="text-sm text-gray mb-4">${esc(r.description)}</p>` : ''}
-        ${r.status === 'pending' && canApprove() ? `
+        ${comp ? `<div id="comp-readonly">${roView}</div>` : ''}
+        <div id="comp-sheet-form" ${comp ? 'style="display:none"' : ''}>
+          ${vendors.length === 0 ? `<p style="color:var(--gray-400);text-align:center;padding:1.5rem">No approved vendors found. Approve vendors in the Vendors section first.</p>` : `
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.25rem">
+            ${vendorSelects}
+          </div>
+          <div class="table-wrap" style="overflow-x:auto">
+            <table id="comp-table" style="min-width:700px">
+              <thead>
+                <tr>
+                  <th rowspan="2">Item Name</th>
+                  <th rowspan="2" style="text-align:center">Qty</th>
+                  <th colspan="2" id="comp-th-0" style="text-align:center;background:var(--gray-50)">Vendor 1</th>
+                  <th colspan="2" id="comp-th-1" style="text-align:center;background:var(--gray-50)">Vendor 2</th>
+                  <th colspan="2" id="comp-th-2" style="text-align:center;background:var(--gray-50)">Vendor 3</th>
+                </tr>
+                <tr>
+                  ${[0,1,2].map(vi => `<th style="text-align:center;font-size:.75rem;background:var(--gray-50)">Unit Price</th><th style="text-align:right;font-size:.75rem;background:var(--gray-50)">Line Total</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>${itemRows}</tbody>
+              <tfoot>
+                <tr style="font-weight:700;border-top:2px solid var(--gray-200)">
+                  <td colspan="2">Grand Total</td>
+                  ${[0,1,2].map(vi => `<td colspan="2" id="comp-grand-${vi}" style="text-align:right;font-size:.95rem">—</td>`).join('')}
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div id="comp-cheapest-banner" style="display:none;margin-top:.75rem;padding:.625rem 1rem;border-radius:.5rem;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-size:.875rem;font-weight:600"></div>
           <div class="btn-group mt-4">
-            <button class="btn btn-primary btn-sm" onclick="doApprove('${r.id}')">Approve</button>
-            <button class="btn btn-danger btn-sm"  onclick="doReject('${r.id}')">Reject</button>
-          </div>` : ''}
-        ${r.status === 'pending' && r.requester_id === currentUser?.id ? `
-          <button class="btn btn-outline btn-sm mt-4" onclick="doCancel('${r.id}')">Cancel Request</button>` : ''}
-        ${(r.history || []).length ? `
-          <h4 style="font-size:.9rem;font-weight:700;margin:1.25rem 0 .5rem">Approval History</h4>
-          ${r.history.map(h => `<div style="padding:.625rem;background:var(--gray-50);border-radius:.5rem;margin-bottom:.5rem;font-size:.8rem">
-            <strong>${esc(h.approver_name)}</strong> (${esc(h.approver_role)}) — <em>${h.action}</em> — ${fmtDate(h.created_at)}
-            ${h.comments ? `<div style="color:var(--gray-500);margin-top:.25rem">${esc(h.comments)}</div>` : ''}
-          </div>`).join('')}` : ''}
+            <button class="btn btn-outline" onclick="saveComparison('${r.id}')">Save Comparison</button>
+            ${canAct ? `<button class="btn btn-primary" onclick="verifyAndApprove('${r.id}')">Verify Amount &amp; Approve</button>
+            <button class="btn btn-danger btn-sm" onclick="doReject('${r.id}')">Reject</button>` : ''}
+          </div>`}
+        </div>
       </div>
     </div>`;
+}
+
+function compReadOnly(comp) {
+  const vnames = comp.vendors.map(v => v.name);
+  const ci = comp.cheapest_vendor_index;
+  const highlight = ['','',''].map((_,i) =>
+    i === ci ? 'background:#f0fdf4;color:#15803d;font-weight:700' : '');
+
+  const rows = (comp.line_items || []).map(li => `<tr>
+    <td style="font-weight:600">${esc(li.name)}</td>
+    <td style="text-align:center">${li.quantity}</td>
+    ${(li.vendor_prices || []).map((p, vi) => {
+      const total = p * li.quantity;
+      return `<td style="text-align:right;${highlight[vi]}">${fmt(p)}</td><td style="text-align:right;${highlight[vi]}">${fmt(total)}</td>`;
+    }).join('')}
+  </tr>`).join('');
+
+  const totals = (comp.totals || []).map((t, vi) =>
+    `<td colspan="2" style="text-align:right;font-size:.95rem;font-weight:700;${highlight[vi]}">${fmt(t)}${vi === ci ? ' ✓' : ''}</td>`
+  ).join('');
+
+  return `
+    <div style="margin-bottom:.75rem;font-size:.8rem;color:var(--gray-500)">
+      Saved by <strong>${esc(comp.saved_by)}</strong> on ${fmtDate(comp.saved_at)}
+    </div>
+    <div style="padding:.625rem 1rem;border-radius:.5rem;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-size:.875rem;font-weight:600;margin-bottom:1rem">
+      Cheapest vendor: <strong>${esc(vnames[ci] || '—')}</strong> — Total: ${fmt((comp.totals||[])[ci] || 0)}
+    </div>
+    <div class="table-wrap" style="overflow-x:auto">
+      <table style="min-width:600px">
+        <thead>
+          <tr>
+            <th rowspan="2">Item Name</th>
+            <th rowspan="2" style="text-align:center">Qty</th>
+            ${vnames.map((n,vi) => `<th colspan="2" style="text-align:center;${highlight[vi]}">${esc(n)}</th>`).join('')}
+          </tr>
+          <tr>
+            ${vnames.map((_,vi) => `<th style="text-align:right;font-size:.75rem;${highlight[vi]}">Unit</th><th style="text-align:right;font-size:.75rem;${highlight[vi]}">Total</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr style="border-top:2px solid var(--gray-200)">
+            <td colspan="2" style="font-weight:700">Grand Total</td>
+            ${totals}
+          </tr>
+        </tfoot>
+      </table>
+    </div>`;
+}
+
+function toggleCompEdit() {
+  const form = document.getElementById('comp-sheet-form');
+  const ro   = document.getElementById('comp-readonly');
+  if (!form) return;
+  const hidden = form.style.display === 'none';
+  form.style.display = hidden ? '' : 'none';
+  if (ro) ro.style.display = hidden ? 'none' : '';
+  if (hidden) updateCompTotals();
+}
+
+function updateCompTotals() {
+  const items = document.querySelectorAll('#comp-table tbody tr');
+  if (!items.length) return;
+  const grandTotals = [0, 0, 0];
+  const vNames = [0,1,2].map(vi => {
+    const sel = document.getElementById(`comp-v${vi}-sel`);
+    return sel ? (sel.options[sel.selectedIndex]?.dataset?.name || `Vendor ${vi+1}`) : `Vendor ${vi+1}`;
+  });
+
+  // Update column headers
+  [0,1,2].forEach(vi => {
+    const th = document.getElementById(`comp-th-${vi}`);
+    if (th) th.textContent = vNames[vi];
+  });
+
+  items.forEach((row, ii) => {
+    const qtyCell = row.cells[1];
+    const qty = parseInt(qtyCell?.textContent || '1', 10);
+    [0,1,2].forEach(vi => {
+      const inp = document.getElementById(`comp-p-${ii}-${vi}`);
+      const ltEl = document.getElementById(`comp-lt-${ii}-${vi}`);
+      if (!inp || !ltEl) return;
+      const price = parseFloat(inp.value) || 0;
+      const lineTotal = price * qty;
+      ltEl.textContent = price > 0 ? fmt(lineTotal) : '—';
+      grandTotals[vi] += lineTotal;
+    });
+  });
+
+  // Find cheapest among columns that have any price entered
+  let cheapest = -1;
+  let minTotal = Infinity;
+  [0,1,2].forEach(vi => {
+    const sel = document.getElementById(`comp-v${vi}-sel`);
+    if (sel && sel.value && grandTotals[vi] > 0 && grandTotals[vi] < minTotal) {
+      minTotal = grandTotals[vi];
+      cheapest = vi;
+    }
+  });
+
+  // Update grand total cells + highlight
+  [0,1,2].forEach(vi => {
+    const el = document.getElementById(`comp-grand-${vi}`);
+    if (!el) return;
+    el.textContent = grandTotals[vi] > 0 ? fmt(grandTotals[vi]) + (vi === cheapest ? ' ✓' : '') : '—';
+    el.style.color      = vi === cheapest ? '#15803d' : '';
+    el.style.background = vi === cheapest ? '#f0fdf4' : '';
+
+    // Also highlight line-total cells in that column
+    items.forEach((_, ii) => {
+      const ltEl = document.getElementById(`comp-lt-${ii}-${vi}`);
+      if (ltEl) {
+        ltEl.style.color      = vi === cheapest ? '#15803d' : 'var(--gray-500)';
+        ltEl.style.fontWeight = vi === cheapest ? '700' : '';
+      }
+    });
+  });
+
+  // Banner
+  const banner = document.getElementById('comp-cheapest-banner');
+  if (banner) {
+    if (cheapest >= 0) {
+      banner.textContent = `Cheapest: ${vNames[cheapest]} — Total: ${fmt(grandTotals[cheapest])}`;
+      banner.style.display = '';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+}
+
+function _collectCompData() {
+  const vendors = [];
+  [0,1,2].forEach(vi => {
+    const sel = document.getElementById(`comp-v${vi}-sel`);
+    if (sel && sel.value) vendors.push({ id: sel.value, name: sel.options[sel.selectedIndex]?.dataset?.name || '' });
+  });
+  if (!vendors.length) { alert('Select at least one vendor'); return null; }
+
+  const itemRows = document.querySelectorAll('#comp-table tbody tr');
+  const prices = Array.from(itemRows).map((_, ii) =>
+    [0,1,2].slice(0, 3).map(vi => parseFloat(document.getElementById(`comp-p-${ii}-${vi}`)?.value || '0') || 0)
+  );
+  return { vendors, prices };
+}
+
+async function saveComparison(reqId) {
+  const data = _collectCompData();
+  if (!data) return;
+  try {
+    await api.post('/requests/' + reqId + '/comparison', data);
+    navigateTo('requests/' + reqId);
+  } catch (err) { alert(err.data?.error || 'Failed to save comparison'); }
+}
+
+async function verifyAndApprove(reqId) {
+  const data = _collectCompData();
+  if (!data) return;
+  const comments = prompt('Approval comment (optional):') ?? '';
+  try {
+    await api.post('/requests/' + reqId + '/comparison', data);
+    await api.post('/requests/' + reqId + '/approve', { comments });
+    navigateTo('requests/' + reqId);
+  } catch (err) { alert(err.data?.error || 'Failed'); }
 }
 
 function canApprove() {
@@ -411,12 +733,12 @@ async function renderApprovals(el) {
     <div class="card">
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Title</th><th>Requester</th><th>Amount (AED)</th><th>Date</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Title</th><th>Requester</th><th>Items</th><th>Date</th><th>Actions</th></tr></thead>
           <tbody>
             ${rows.map(r => `<tr>
               <td style="font-weight:600">${esc(r.title)}</td>
               <td>${esc(r.requester_name || '—')}</td>
-              <td>${fmt(r.amount)}</td>
+              <td>${(r.items||[]).length} item${(r.items||[]).length !== 1 ? 's' : ''}</td>
               <td>${fmtDate(r.created_at)}</td>
               <td>
                 <div class="btn-group">
