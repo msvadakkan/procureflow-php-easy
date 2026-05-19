@@ -1,9 +1,24 @@
 <?php
 /**
  * ProcureFlow — Purchase Approval System Installer
- * Multi-step setup wizard: Requirements → DB → Admin → Organization → SMTP → Install
- * DELETE this file after setup is complete.
+ * Only accessible during initial setup. Redirects to home once an admin exists.
  */
+
+// ── Setup guard: block access once installation is complete ───────────────────
+if (file_exists(__DIR__ . '/.env')) {
+    try {
+        require_once __DIR__ . '/vendor/autoload.php';
+        require_once __DIR__ . '/includes/bootstrap.php';
+        $admin = db()->users->findOne(['role' => 'admin'], ['projection' => ['_id' => 1]]);
+        if ($admin) {
+            header('Location: index.php');
+            exit;
+        }
+    } catch (Throwable $e) {
+        // DB unreachable or not yet configured — allow installer to proceed
+    }
+}
+
 session_start();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
