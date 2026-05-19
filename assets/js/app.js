@@ -152,14 +152,30 @@ function renderNav() {
   }).join('');
 }
 
+const ROLE_LABELS = {
+  admin:           'Administrator',
+  ceo:             'CEO',
+  department_head: 'Dept. Head',
+  manager:         'Manager',
+  employee:        'Employee',
+};
+
 function renderUserInfo() {
   const el = document.getElementById('user-info');
   if (!el || !currentUser) return;
-  const initials = (currentUser.name || 'U').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  const initials  = (currentUser.name || 'U').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  const roleLabel = ROLE_LABELS[currentUser.role] || currentUser.role;
+  const isAdmin   = currentUser.role === 'admin';
   el.innerHTML = `
     <div class="user-info">
-      <div class="avatar">${initials}</div>
-      <div><div class="name">${currentUser.name}</div><div class="role">${currentUser.role}</div></div>
+      <div class="avatar" style="${isAdmin ? 'background:var(--primary);color:#fff' : ''}">${initials}</div>
+      <div>
+        <div class="name">${esc(currentUser.name)}</div>
+        <div class="role" style="display:flex;align-items:center;gap:.3rem">
+          ${isAdmin ? '<span style="background:#fce7f3;color:#be185d;font-size:.65rem;font-weight:800;padding:.1rem .35rem;border-radius:4px;text-transform:uppercase;letter-spacing:.04em">Admin</span>' : ''}
+          ${esc(roleLabel)}
+        </div>
+      </div>
     </div>
     <button class="logout-btn" onclick="logout()">Sign Out</button>`;
 }
@@ -946,7 +962,7 @@ function loginHTML() {
       <div class="auth-header">
         <div id="login-logo" style="font-size:2.5rem;margin-bottom:.75rem">🛒</div>
         <h1 id="login-company-name">Purchase Approval System</h1>
-        <p>Staff Login</p>
+        <p>Staff &amp; Admin Portal</p>
       </div>
       <div class="auth-body">
         <div id="login-error" class="alert alert-error" style="display:none"></div>
