@@ -2,17 +2,25 @@ services:
   app:
     build: .
     ports:
-      - "8080:80"
+      - "3000:80"
     environment:
       MONGO_URI: mongodb://mongo:27017
       MONGO_DB: ${MONGO_DB:-purchase_approval}
       JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production}
-      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_URL: ${APP_URL:-http://localhost:3000}
     volumes:
       - uploads:/var/www/html/uploads
     depends_on:
       mongo:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - app_network
     restart: unless-stopped
 
   mongo:
@@ -25,7 +33,13 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks:
+      - app_network
     restart: unless-stopped
+
+networks:
+  app_network:
+    driver: bridge
 
 volumes:
   mongo_data:
