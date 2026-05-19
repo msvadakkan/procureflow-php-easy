@@ -1,0 +1,14 @@
+Options -Indexes
+RewriteEngine On
+
+# API routing: /api/<resource>[/<id>][/<action>]
+RewriteRule ^api/auth/(.*)$           api/index.php?resource=auth&path=$1   [QSA,L]
+RewriteRule ^api/admin/(.*)$          api/index.php?resource=admin&path=$1  [QSA,L]
+RewriteRule ^api/([^/]+)/([^/]+)/([^/]+)$ api/index.php?resource=$1&id=$2&action=$3 [QSA,L]
+RewriteRule ^api/([^/]+)/([^/]+)$    api/index.php?resource=$1&id=$2       [QSA,L]
+RewriteRule ^api/([^/]+)/?$          api/index.php?resource=$1             [QSA,L]
+
+# SPA fallback — serve index.html for all non-file, non-directory requests
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(?!api/).*$              index.html                            [L]

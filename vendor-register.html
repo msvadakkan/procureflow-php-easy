@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendor Registration — Procurement System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/main.css" />
+  <style>
+    body { background: #fefce8; padding: 2rem 1rem; }
+    .reg-wrap { max-width: 680px; margin: 0 auto; }
+    .section-card { background: #fdf4f7; border-radius: .875rem; border: 1px solid #fbcfe8; padding: 1.5rem; margin-bottom: 1.25rem; }
+    .section-card h3 { font-size: .95rem; font-weight: 700; color: #831843; margin-bottom: 1.25rem; }
+    .success-box { background: #fdf4f7; border-radius: 1.25rem; box-shadow: 0 8px 32px rgba(236,72,153,.1); padding: 3rem 2rem; text-align: center; max-width: 400px; margin: 4rem auto; border: 1px solid #fbcfe8; }
+  </style>
+</head>
+<body>
+
+  <div class="reg-wrap">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:2rem">
+      <div style="font-size:3rem;margin-bottom:.5rem">🏪</div>
+      <h1 style="font-size:1.75rem;font-weight:800;color:var(--gray-900)">Vendor Registration</h1>
+      <p style="color:var(--gray-500);font-size:.9rem">Register your company to participate in procurement tenders</p>
+    </div>
+
+    <div id="error-banner" class="alert alert-error" style="display:none;margin-bottom:1rem"></div>
+    <div id="success-box" style="display:none">
+      <div class="success-box">
+        <div style="font-size:4rem;margin-bottom:1rem">✅</div>
+        <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:.5rem">Registration Submitted!</h2>
+        <p style="color:var(--gray-500);font-size:.9rem;margin-bottom:1.5rem">Your registration is pending admin approval. You will be notified once approved.</p>
+        <a href="vendor-login.html" class="btn btn-primary" style="background:#22c55e;justify-content:center;width:100%">Back to Login</a>
+      </div>
+    </div>
+
+    <form id="reg-form" enctype="multipart/form-data">
+
+      <!-- Company Info -->
+      <div class="section-card">
+        <h3>🏢 Company Information</h3>
+        <div class="grid grid-2">
+          <div class="form-group"><label class="form-label">Company Name <span style="color:red">*</span></label>
+            <input name="company_name" class="form-control" placeholder="ABC Trading LLC" required /></div>
+          <div class="form-group"><label class="form-label">VAT Number <span style="color:red">*</span></label>
+            <input name="vat_number" class="form-control" placeholder="100123456700003" required /></div>
+          <div class="form-group"><label class="form-label">Contact Number <span style="color:red">*</span></label>
+            <input name="contact_number" class="form-control" placeholder="+971 4 000 0000" required /></div>
+          <div class="form-group"><label class="form-label">Sales Person <span style="color:red">*</span></label>
+            <input name="sales_person" class="form-control" placeholder="John Smith" required /></div>
+        </div>
+        <div class="form-group"><label class="form-label">Address <span style="color:red">*</span></label>
+          <textarea name="address" class="form-control" rows="2" placeholder="P.O. Box 0000, Dubai, UAE" required></textarea></div>
+      </div>
+
+      <!-- Account Credentials -->
+      <div class="section-card">
+        <h3>🔐 Account Credentials</h3>
+        <div class="grid grid-2">
+          <div class="form-group" style="grid-column:span 2"><label class="form-label">Email Address <span style="color:red">*</span></label>
+            <input type="email" name="email" class="form-control" placeholder="you@yourcompany.com" required /></div>
+          <div class="form-group"><label class="form-label">Password <span style="color:red">*</span></label>
+            <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required minlength="6" /></div>
+          <div class="form-group"><label class="form-label">Confirm Password <span style="color:red">*</span></label>
+            <input type="password" id="confirm_password" class="form-control" placeholder="••••••••" required /></div>
+        </div>
+      </div>
+
+      <!-- Bank Details -->
+      <div class="section-card">
+        <h3>🏦 UAE Bank Details</h3>
+        <div class="grid grid-2">
+          <div class="form-group"><label class="form-label">Bank Name</label>
+            <input name="bank_name" class="form-control" placeholder="Emirates NBD" /></div>
+          <div class="form-group"><label class="form-label">Account Name</label>
+            <input name="account_name" class="form-control" placeholder="ABC Trading LLC" /></div>
+          <div class="form-group"><label class="form-label">Account Number</label>
+            <input name="account_number" class="form-control" placeholder="1012345678901" /></div>
+          <div class="form-group"><label class="form-label">IBAN</label>
+            <input name="iban" class="form-control" placeholder="AE070331234567890123456" /></div>
+          <div class="form-group"><label class="form-label">SWIFT / BIC Code</label>
+            <input name="swift_code" class="form-control" placeholder="EBILAEAD" /></div>
+          <div class="form-group"><label class="form-label">Branch</label>
+            <input name="branch" class="form-control" placeholder="Dubai Main Branch" /></div>
+        </div>
+      </div>
+
+      <!-- Supply Categories -->
+      <div class="section-card">
+        <h3>🏷️ Supply Categories</h3>
+        <p style="font-size:.85rem;color:var(--gray-500);margin-bottom:1rem">Select the departments your company supplies goods or services to:</p>
+        <div id="categories-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.5rem"></div>
+      </div>
+
+      <!-- Documents -->
+      <div class="section-card">
+        <h3>📎 Document Attachments</h3>
+        <div id="file-uploads"></div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:.75rem;margin-bottom:2rem">
+        <a href="vendor-login.html" class="btn btn-outline" style="flex:1;justify-content:center">Cancel</a>
+        <button type="submit" id="submit-btn" class="btn btn-primary" style="flex:1;justify-content:center;background:#0d9488;">
+          Submit Registration
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script>
+    // Render categories checkboxes
+    const DEPARTMENTS = ['Finance','IT','Operations','HR','Marketing','Procurement','Legal','Administration','Facilities','Sales'];
+    const catGrid = document.getElementById('categories-grid');
+    DEPARTMENTS.forEach(dept => {
+      catGrid.innerHTML += `<label style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;cursor:pointer;padding:.4rem .6rem;border:1px solid var(--gray-200);border-radius:.5rem;hover:background:#f8fafc">
+        <input type="checkbox" name="category_${dept.toLowerCase()}" value="${dept}" style="width:15px;height:15px" />
+        ${dept}
+      </label>`;
+    });
+
+    // Render file upload fields
+    const fileFields = [
+      ['trade_license',   'Trade License'],
+      ['vat_certificate', 'VAT Certificate'],
+      ['bank_document',   'Bank Details Document'],
+    ];
+    const wrap = document.getElementById('file-uploads');
+    fileFields.forEach(([name, label]) => {
+      wrap.innerHTML += `<div style="margin-bottom:1rem">
+        <p style="font-size:.85rem;font-weight:600;color:var(--gray-700);margin-bottom:.375rem">${label}</p>
+        <input type="file" name="${name}" accept=".pdf,.jpg,.jpeg,.png"
+          style="display:block;width:100%;font-size:.85rem;color:var(--gray-600)"
+          onchange="document.getElementById('fn-${name}').textContent = this.files[0]?.name || ''"
+        />
+        <span id="fn-${name}" style="font-size:.75rem;color:#0d9488;margin-top:.25rem;display:block"></span>
+      </div>`;
+    });
+
+    document.getElementById('reg-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pw  = document.getElementById('password').value;
+      const cpw = document.getElementById('confirm_password').value;
+      const errEl = document.getElementById('error-banner');
+      const btn   = document.getElementById('submit-btn');
+
+      if (pw !== cpw) {
+        errEl.textContent = 'Passwords do not match';
+        errEl.style.display = 'flex';
+        return;
+      }
+      errEl.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Submitting…';
+
+      try {
+        const fd = new FormData(e.target);
+        fd.delete('confirm_password');
+        // Collect checked categories into a single comma-separated field
+        const cats = DEPARTMENTS.filter(d => fd.get(`category_${d.toLowerCase()}`) === d);
+        DEPARTMENTS.forEach(d => fd.delete(`category_${d.toLowerCase()}`));
+        fd.set('categories', cats.join(','));
+        const res = await fetch(window.location.origin + '/api/vendors', {
+          method: 'POST',
+          body: fd,
+        });
+        const data = await res.json();
+        if (!res.ok) throw { data };
+        document.getElementById('reg-form').style.display = 'none';
+        document.getElementById('success-box').style.display = 'block';
+      } catch (err) {
+        errEl.textContent = err.data?.error || 'Registration failed. Please try again.';
+        errEl.style.display = 'flex';
+        btn.disabled = false;
+        btn.textContent = 'Submit Registration';
+      }
+    });
+  </script>
+</body>
+</html>

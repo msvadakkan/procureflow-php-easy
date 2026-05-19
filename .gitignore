@@ -1,0 +1,27 @@
+# Composer dependencies — install with: composer install --no-dev
+/vendor/
+
+# Environment file — copy .env.example to .env and fill in values
+.env
+
+# Uploaded files — created at runtime, not tracked in git
+/uploads/*
+!/uploads/vendors/
+!/uploads/vendors/.gitkeep
+!/uploads/companies/
+!/uploads/companies/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# PHP logs
+*.log
+php_errors.log

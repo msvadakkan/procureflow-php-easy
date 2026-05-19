@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Procurement System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #fefce8; color: #1e293b; min-height: 100vh; }
+
+    /* Nav */
+    .nav {
+      background: #fdf4f7;
+      border-bottom: 1px solid #fbcfe8;
+      padding: 0 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 68px;
+      box-shadow: 0 1px 8px rgba(236,72,153,.07);
+    }
+    .nav-logo { display: flex; align-items: center; gap: .75rem; text-decoration: none; }
+    .nav-logo-img { width: 38px; height: 38px; object-fit: contain; border-radius: 8px; }
+    .nav-logo-mark { width: 38px; height: 38px; background: linear-gradient(135deg,#ec4899,#f472b6); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #fff; font-size: 1.3rem; }
+    .nav-logo .name { font-weight: 800; font-size: 1rem; color: #831843; }
+    .nav-logo .name span { display: block; font-size: .7rem; font-weight: 500; color: #ec4899; }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #fce7f3 0%, #fef9c3 50%, #dcfce7 100%);
+      color: #1e293b;
+      padding: 5rem 1.5rem 4rem;
+      text-align: center;
+      border-bottom: 1px solid #fbcfe8;
+    }
+    .hero-logo { width: 120px; height: 120px; object-fit: contain; margin: 0 auto 1.5rem; display: block; border-radius: 1rem; }
+    .hero-icon { font-size: 5rem; margin-bottom: 1.5rem; display: block; }
+    .hero h1 { font-size: clamp(1.75rem, 4vw, 2.75rem); font-weight: 900; letter-spacing: -.03em; margin-bottom: .75rem; color: #831843; }
+    .hero p  { font-size: 1.05rem; color: #4b5563; max-width: 520px; margin: 0 auto 2rem; line-height: 1.6; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; }
+    .badge { display: inline-flex; align-items: center; gap: .375rem; padding: .375rem .875rem; background: #fdf4f7; border: 1px solid #fbcfe8; border-radius: 9999px; font-size: .75rem; font-weight: 600; color: #9d174d; }
+
+    /* Main */
+    .container { max-width: 900px; margin: 0 auto; padding: 0 1.25rem; }
+    .section { padding: 3.5rem 0; }
+    .section-title { font-size: 1.5rem; font-weight: 800; color: #831843; margin-bottom: .5rem; }
+    .section-sub { color: #6b7280; font-size: .9rem; margin-bottom: 2rem; }
+
+    /* Portal Cards */
+    .portals { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
+    .portal-card {
+      border-radius: 1.25rem;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      display: flex; flex-direction: column;
+    }
+    .portal-header { padding: 2rem 2rem 1.25rem; }
+    .portal-header .icon { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; margin-bottom: 1.25rem; }
+    .portal-header h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: .5rem; }
+    .portal-header p  { font-size: .875rem; opacity: .85; line-height: 1.6; }
+    .portal-footer { padding: 1.25rem 2rem 1.75rem; margin-top: auto; }
+    .portal-btn {
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+      padding: .8rem; border-radius: .75rem; font-weight: 700; font-size: .9rem;
+      text-decoration: none; transition: opacity .15s;
+    }
+    .portal-btn:hover { opacity: .88; }
+
+    /* Staff Portal */
+    .card-staff { background: linear-gradient(145deg, #fce7f3 0%, #fbcfe8 100%); color: #831843; }
+    .card-staff .portal-header h2 { color: #831843; }
+    .card-staff .portal-header p  { color: #9d174d; }
+    .card-staff .portal-btn { background: #ec4899; color: #fefce8; }
+
+    /* Vendor Portal */
+    .card-vendor { background: linear-gradient(145deg, #f0fdf4 0%, #dcfce7 100%); color: #166534; }
+    .card-vendor .portal-header h2 { color: #15803d; }
+    .card-vendor .portal-header p  { color: #166534; }
+    .card-vendor .portal-btn { background: #22c55e; color: #fefce8; }
+    .portal-btn-alt { background: #16a34a; color: #fefce8; }
+
+    /* Footer */
+    footer { background: #831843; color: #fce7f3; text-align: center; padding: 2rem 1.5rem; font-size: .8rem; border-top: 1px solid #9d174d; }
+    footer a { color: #fbcfe8; text-decoration: none; }
+
+    @media (max-width: 640px) {
+      .hero { padding: 3rem 1rem 2.5rem; }
+      .nav { padding: 0 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav">
+    <a class="nav-logo" href="index.html">
+      <div id="nav-logo-wrap" class="nav-logo-mark">🏢</div>
+      <div class="name"><span id="nav-company-name">Procurement System</span><span>Procurement Portal</span></div>
+    </a>
+    <div style="display:flex;gap:.625rem">
+      <a href="portal.html" style="padding:.5rem 1.25rem;border-radius:8px;font-size:.85rem;font-weight:700;border:1.5px solid #ec4899;color:#ec4899;text-decoration:none">Staff Login</a>
+      <a href="vendor-login.html" style="padding:.5rem 1.25rem;border-radius:8px;font-size:.85rem;font-weight:700;background:#22c55e;color:#fefce8;text-decoration:none">Vendor Portal</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <div class="hero">
+    <span id="hero-icon" class="hero-icon">🏢</span>
+    <img id="hero-logo" class="hero-logo" src="" alt="" style="display:none" onerror="this.style.display='none';document.getElementById('hero-icon').style.display='block'" />
+    <h1 id="hero-title">Purchase Approval System</h1>
+    <p>Manage purchase requests, vendor tenders, and multi-level approvals — all in one secure portal.</p>
+    <div class="badge-row">
+      <span class="badge">📢 Department Tenders</span>
+      <span class="badge">🏪 Vendor Portal</span>
+      <span class="badge">📋 Purchase Requests</span>
+      <span class="badge">✅ Approval Workflows</span>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- Portals -->
+    <div class="section">
+      <div class="section-title">Access Your Portal</div>
+      <div class="section-sub">Two secure portals — one for internal staff, one for registered vendors.</div>
+      <div class="portals">
+
+        <!-- Staff Portal -->
+        <div class="portal-card card-staff">
+          <div class="portal-header">
+            <div class="icon" style="background:#fce7f3">🏢</div>
+            <h2>Staff Portal</h2>
+            <p>For employees, managers, department heads, CEOs, and system administrators to raise and approve purchase requests.</p>
+          </div>
+          <div class="portal-footer">
+            <a href="portal.html" class="portal-btn">🔐 Staff Sign In →</a>
+          </div>
+        </div>
+
+        <!-- Vendor Portal -->
+        <div class="portal-card card-vendor">
+          <div class="portal-header">
+            <div class="icon" style="background:#dcfce7">🏪</div>
+            <h2>Vendor Portal</h2>
+            <p>For registered suppliers and service providers to view open tenders and submit competitive quotes.</p>
+          </div>
+          <div class="portal-footer" style="display:flex;gap:.75rem">
+            <a href="vendor-login.html" class="portal-btn" style="flex:1">🔐 Sign In</a>
+            <a href="vendor-register.html" class="portal-btn portal-btn-alt" style="flex:1">📝 Register</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div>© <span id="footer-year"></span> <span id="footer-company">Procurement System</span> &nbsp;·&nbsp; Purchase Approval System</div>
+  </footer>
+
+  <script src="assets/js/api.js"></script>
+  <script>
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+    api.get('/admin/app-info').then(data => {
+      const name = data.name || 'Procurement System';
+
+      document.title = name + ' — Procurement System';
+      document.getElementById('nav-company-name').textContent = name;
+      document.getElementById('hero-title').textContent = name;
+      document.getElementById('footer-company').textContent = name;
+
+      if (data.logo) {
+        const logoEl = document.getElementById('hero-logo');
+        logoEl.src = data.logo;
+        logoEl.alt = name;
+        logoEl.style.display = 'block';
+        document.getElementById('hero-icon').style.display = 'none';
+
+        const navWrap = document.getElementById('nav-logo-wrap');
+        navWrap.innerHTML = '<img src="' + data.logo + '" alt="' + name + '" class="nav-logo-img" onerror="this.parentElement.innerHTML=\'🏢\'" />';
+        navWrap.className = '';
+        navWrap.style.cssText = 'width:38px;height:38px;display:flex;align-items:center;justify-content:center';
+      } else {
+        const initial = name.charAt(0).toUpperCase();
+        document.getElementById('nav-logo-wrap').textContent = initial;
+      }
+    }).catch(() => {});
+  </script>
+</body>
+</html>
